@@ -442,45 +442,48 @@ function copyPreview() {
 async function formatWithAI() {
   const raw = document.getElementById('raw-notes').value.trim();
   if (!raw) return;
+
   const btn = document.getElementById('ai-btn');
   btn.disabled = true;
-  setStatus('ai-status', 'spinner:Formatting…', '');
+  setStatus('ai-status', 'Formatting…', '');
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: `You are a business communication assistant helping a Data/Finance Analytics Manager write a concise weekly SVP status update. Given raw notes, extract and format into exactly four sections. Respond ONLY with a valid JSON object with keys: accomplishments, priorities, financial, team. Each value is a short bullet list using • prefix with newline between bullets. Be concise and professional. No markdown, no extra keys, no preamble, no trailing commas.`,
-        messages: [{ role: 'user', content: raw }]
-      })
-    });
+    const resp = await fetch(
+      'https://api-inference.huggingface.co/models/google/flan-t5-large',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: `Format the following into JSON with keys accomplishments, priorities, financial, team:\n\n${raw}`
+        })
+      }
+    );
+
     const data = await resp.json();
-    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    const text = data?.[0]?.generated_text || '';
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new Error('Model did not return valid JSON');
+    }
+
     document.getElementById('ai-accomplishments').value = parsed.accomplishments || '';
     document.getElementById('ai-priorities').value      = parsed.priorities || '';
     document.getElementById('ai-financial').value       = parsed.financial || '';
     document.getElementById('ai-team').value            = parsed.team || '';
-    document.getElementById('ai-result').style.display  = '';
-    setStatus('ai-status', 'Done — review below.', 'ok');
-  } catch(e) {
+
+    setStatus('ai-status', 'Done', 'ok');
+
+  } catch (e) {
+    console.error(e);
     setStatus('ai-status', 'Error — try again.', 'err');
   }
-  btn.disabled = false;
-}
 
-function applyAI() {
-  document.getElementById('accomplishments').value = document.getElementById('ai-accomplishments').value;
-  document.getElementById('priorities').value      = document.getElementById('ai-priorities').value;
-  document.getElementById('financial').value       = document.getElementById('ai-financial').value;
-  document.getElementById('team').value            = document.getElementById('ai-team').value;
-  saveEntry();
-  switchTab('compose');
-}
+  btn.disabled = false;
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function setStatus(id, msg, type) {
