@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Update</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e2e0d8;
+    --text: #1a1916;
+    --muted: #888580;
+    --accent: #2a5c45;
+    --accent-light: #eaf2ed;
+    --danger: #c0392b;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
+
+  /* Layout */
+  .app { max-width: 680px; margin: 0 auto; padding: 24px 16px 80px; }
+  .header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 28px; }
+  .header h1 { font-size: 18px; font-weight: 500; letter-spacing: -0.02em; }
+  .header-meta { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+  /* Auth bar */
+  #auth-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  #auth-bar.signed-in { border-color: #b6d9c6; background: var(--accent-light); }
+  .auth-label { font-size: 13px; color: var(--muted); }
+  .auth-label.ok { color: var(--accent); font-weight: 500; }
+  .btn-auth { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; transition: background 0.15s; }
+  .btn-auth:hover { background: var(--bg); }
+  .btn-auth.danger { border-color: #f0d0cd; color: var(--danger); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--border); padding: 3px; border-radius: 8px; }
+  .tab { flex: 1; font-family: var(--sans); font-size: 13px; font-weight: 400; padding: 7px 4px; border: none; background: none; color: var(--muted); cursor: pointer; border-radius: 6px; transition: all 0.15s; }
+  .tab.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  /* Card */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; }
+
+  /* Form */
+  .field { margin-bottom: 18px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; font-family: var(--mono); }
+  textarea, input[type="date"], input[type="text"] {
+    width: 100%; font-family: var(--sans); font-size: 14px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; line-height: 1.55; resize: vertical; transition: border-color 0.15s;
+  }
+  textarea:focus, input:focus { outline: none; border-color: var(--accent); background: #fff; }
+  textarea { min-height: 80px; }
+  input[type="date"] { height: 40px; }
+
+  /* Week row */
+  .week-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .week-row label { font-size: 12px; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .week-row input { flex: 1; max-width: 200px; }
+
+  /* Buttons */
+  .btn { font-family: var(--sans); font-size: 14px; font-weight: 500; padding: 10px 20px; border-radius: 7px; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #234d39; }
+  .btn-primary:disabled { background: #a0bfb3; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { background: var(--bg); }
+  .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+  .status-msg { font-size: 12px; font-family: var(--mono); color: var(--muted); }
+  .status-msg.ok { color: var(--accent); }
+  .status-msg.err { color: var(--danger); }
+
+  /* AI section */
+  .ai-hint { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+  .ai-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .ai-result-label { font-size: 12px; font-family: var(--mono); color: var(--muted); margin-bottom: 12px; }
+
+  /* Preview */
+  .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .preview-week { font-size: 12px; font-family: var(--mono); color: var(--muted); }
+  .btn-copy { font-family: var(--mono); font-size: 12px; padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text); }
+  .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .preview-body { font-size: 14px; line-height: 1.7; }
+  .preview-section { margin-bottom: 20px; }
+  .preview-section:last-child { margin-bottom: 0; }
+  .preview-heading { font-size: 11px; font-weight: 500; font-family: var(--mono); color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .preview-text { color: var(--text); white-space: pre-wrap; }
+  .preview-empty { color: var(--muted); font-style: italic; }
+
+  /* History */
+  .history-item { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .history-item:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+  .history-item:last-child { border-bottom: none; border-radius: 0 0 var(--radius) var(--radius); }
+  .history-item:only-child { border-radius: var(--radius); }
+  .history-item:hover { background: var(--bg); }
+  .history-week { font-size: 13px; font-weight: 500; font-family: var(--mono); }
+  .history-snippet { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .history-arrow { color: var(--muted); font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+
+  /* Spinner */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Mobile tweaks */
+  @media (max-width: 480px) {
+    .app { padding: 16px 12px 80px; }
+    .btn-row { flex-direction: column; align-items: stretch; }
+    .btn-row .btn { width: 100%; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <h1>Weekly Update</h1>
+    <span class="header-meta" id="header-date"></span>
+  </div>
+
+  <div id="auth-bar">
+    <span class="auth-label" id="auth-label">Not signed in</span>
+    <button class="btn-auth" id="auth-btn" onclick="handleAuth()">Sign in with Google</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('compose')">Compose</button>
+    <button class="tab" onclick="switchTab('ai')">AI format</button>
+    <button class="tab" onclick="switchTab('preview')">Preview</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
+  </div>
+
+  <!-- COMPOSE -->
+  <div id="tab-compose">
+    <div class="week-row">
+      <label>Week of</label>
+      <input type="date" id="week-date">
+    </div>
+    <div class="card">
+      <div class="field">
+        <div class="field-label">Key accomplishments</div>
+        <textarea id="accomplishments" placeholder="What got done this week?"></textarea>
+      </div>
+      <div class="field">
+        <div class="field-label">Weekly priorities</div>
+        <textarea id="priorities" placeholder="What is the team focused on next week?"></textarea>
+      </div>
+      <div class="field">
+        <div class="field-label">Financial update</div>
+        <textarea id="financial" placeholder="Key callouts, opps, or risks..."></textarea>
+      </div>
+      <div class="field">
+        <div class="field-label">Team</div>
+        <textarea id="team" placeholder="PTO, hiring updates, team news..." style="min-height:60px;"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="save-btn" onclick="saveEntry()">Save to Sheets</button>
+      <button class="btn btn-secondary" onclick="switchTab('preview')">Preview →</button>
+      <span class="status-msg" id="save-status"></span>
+    </div>
+  </div>
+
+  <!-- AI FORMAT -->
+  <div id="tab-ai" style="display:none;">
+    <div class="card">
+      <p class="ai-hint">Paste raw notes, bullets, or a brain dump — AI will extract and format into the four sections.</p>
+      <div class="field">
+        <div class="field-label">Your raw notes</div>
+        <textarea id="raw-notes" rows="7" placeholder="Meeting notes, Slack messages, bullet points, stream of consciousness..."></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="ai-btn" onclick="formatWithAI()">Format with AI</button>
+        <span class="status-msg" id="ai-status"></span>
+      </div>
+    </div>
+
+    <div id="ai-result" style="display:none;">
+      <hr class="ai-divider">
+      <p class="ai-result-label">Review and edit, then apply →</p>
+      <div class="card">
+        <div class="field">
+          <div class="field-label">Key accomplishments</div>
+          <textarea id="ai-accomplishments"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">Weekly priorities</div>
+          <textarea id="ai-priorities"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">Financial update</div>
+          <textarea id="ai-financial"></textarea>
+        </div>
+        <div class="field">
+          <div class="field-label">Team</div>
+          <textarea id="ai-team" style="min-height:60px;"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="applyAI()">Apply &amp; save →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div id="tab-preview" style="display:none;">
+    <div class="card">
+      <div class="preview-header">
+        <span class="preview-week" id="preview-week-label"></span>
+        <button class="btn-copy" onclick="copyPreview()">Copy</button>
+      </div>
+      <div class="preview-body" id="preview-content"></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="tab-history" style="display:none;">
+    <div id="history-list"></div>
+  </div>
+
+</div>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+// ─── CONFIG — fill these in locally ───────────────────────────────────────
+const CLIENT_ID   = 'YOUR_CLIENT_ID787066023276-bi4n8atsq11595j0hf50lu0fmrmloncf.apps.googleusercontent.com';
+const SHEET_ID    = '1_2AjPAV708zC59bqpzs2GVn_EzfIej_H5YV-YTJvWQ8';
+const SHEET_NAME  = 'Weekly Updates';
+const SCOPES      = 'https://www.googleapis.com/auth/spreadsheets';
+// ──────────────────────────────────────────────────────────────────────────
+
+let accessToken = null;
+let tokenClient = null;
+
+// ── Date helpers ────────────────────────────────────────────────────────────
+function mondayOfWeek() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff)).toISOString().split('T')[0];
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+document.getElementById('week-date').value = mondayOfWeek();
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+// ── Auth ────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  if (typeof google === 'undefined') return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { setAuthUI(false); return; }
+      accessToken = resp.access_token;
+      setAuthUI(true);
+    }
+  });
+};
+
+function handleAuth() {
+  if (accessToken) {
+    accessToken = null;
+    setAuthUI(false);
+    return;
+  }
+  if (!tokenClient) { alert('Google auth not loaded yet — try again in a moment.'); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function setAuthUI(signedIn) {
+  const bar = document.getElementById('auth-bar');
+  const label = document.getElementById('auth-label');
+  const btn = document.getElementById('auth-btn');
+  if (signedIn) {
+    bar.classList.add('signed-in');
+    label.textContent = 'Signed in — ready to save';
+    label.className = 'auth-label ok';
+    btn.textContent = 'Sign out';
+    btn.className = 'btn-auth danger';
+  } else {
+    bar.classList.remove('signed-in');
+    label.textContent = 'Not signed in';
+    label.className = 'auth-label';
+    btn.textContent = 'Sign in with Google';
+    btn.className = 'btn-auth';
+  }
+}
+
+// ── Tab switching ───────────────────────────────────────────────────────────
+function switchTab(name) {
+  ['compose','ai','preview','history'].forEach((t, i) => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+    document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
+  });
+  if (name === 'preview') buildPreview();
+  if (name === 'history') loadHistory();
+}
+
+// ── Form data ───────────────────────────────────────────────────────────────
+function getForm() {
+  return {
+    week:           document.getElementById('week-date').value,
+    accomplishments: document.getElementById('accomplishments').value.trim(),
+    priorities:     document.getElementById('priorities').value.trim(),
+    financial:      document.getElementById('financial').value.trim(),
+    team:           document.getElementById('team').value.trim()
+  };
+}
+
+function setForm(d) {
+  document.getElementById('week-date').value       = d.week || mondayOfWeek();
+  document.getElementById('accomplishments').value = d.accomplishments || '';
+  document.getElementById('priorities').value      = d.priorities || '';
+  document.getElementById('financial').value       = d.financial || '';
+  document.getElementById('team').value            = d.team || '';
+}
+
+// ── Google Sheets ───────────────────────────────────────────────────────────
+async function sheetsRequest(method, endpoint, body) {
+  const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID;
+  const res = await fetch(base + endpoint, {
+    method,
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error('Sheets API error: ' + res.status);
+  return res.json();
+}
+
+async function saveEntry() {
+  const d = getForm();
+  if (!d.week) { setStatus('save-status', 'Set a week date first.', 'err'); return; }
+  if (!accessToken) { setStatus('save-status', 'Sign in first.', 'err'); return; }
+
+  setStatus('save-status', 'spinner:Saving…', '');
+  document.getElementById('save-btn').disabled = true;
+
+  try {
+    // Read existing data to check for duplicate week
+    const existing = await sheetsRequest('GET', `/values/${SHEET_NAME}!A:A`);
+    const rows = existing.values || [];
+    const existingWeeks = rows.slice(1).map((r, i) => ({ week: r[0], row: i + 2 }));
+    const match = existingWeeks.find(r => r.week === d.week);
+    const row = [d.week, d.accomplishments, d.priorities, d.financial, d.team, new Date().toISOString()];
+
+    if (match) {
+      await sheetsRequest('PUT', `/values/${SHEET_NAME}!A${match.row}:F${match.row}?valueInputOption=RAW`, { values: [row] });
+    } else {
+      await sheetsRequest('POST', `/values/${SHEET_NAME}!A:F:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { values: [row] });
+    }
+    setStatus('save-status', 'Saved ✓', 'ok');
+  } catch(e) {
+    setStatus('save-status', 'Error saving — check console.', 'err');
+    console.error(e);
+  }
+  document.getElementById('save-btn').disabled = false;
+}
+
+async function loadHistory() {
+  const el = document.getElementById('history-list');
+  if (!accessToken) {
+    el.innerHTML = '<div class="empty-state">Sign in to view history.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="empty-state"><span class="spinner"></span> Loading…</div>';
+  try {
+    const data = await sheetsRequest('GET', `/values/${SHEET_NAME}!A2:F1000`);
+    const rows = (data.values || []).reverse();
+    if (!rows.length) { el.innerHTML = '<div class="empty-state">No saved weeks yet.</div>'; return; }
+    el.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">' +
+      rows.map((r, i) => {
+        const week = r[0] || '';
+        const snippet = (r[1] || '').slice(0, 80) + ((r[1] || '').length > 80 ? '…' : '');
+        return `<div class="history-item" onclick="loadRow(${rows.length - 1 - i + 2})">
+          <div><div class="history-week">Week of ${fmtDate(week)}</div><div class="history-snippet">${snippet || '(no accomplishments noted)'}</div></div>
+          <div class="history-arrow">›</div>
+        </div>`;
+      }).join('') + '</div>';
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state">Error loading history.</div>';
+  }
+}
+
+async function loadRow(rowNum) {
+  try {
+    const data = await sheetsRequest('GET', `/values/${SHEET_NAME}!A${rowNum}:E${rowNum}`);
+    const r = (data.values || [[]])[0];
+    setForm({ week: r[0], accomplishments: r[1], priorities: r[2], financial: r[3], team: r[4] });
+    switchTab('compose');
+  } catch(e) { console.error(e); }
+}
+
+// ── Preview ─────────────────────────────────────────────────────────────────
+function buildPreview() {
+  const d = getForm();
+  document.getElementById('preview-week-label').textContent = d.week ? 'Week of ' + fmtDate(d.week) : '';
+  const sections = [
+    { h: 'Key accomplishments', b: d.accomplishments },
+    { h: 'Weekly priorities',   b: d.priorities },
+    { h: 'Financial update',    b: d.financial },
+    { h: 'Team',                b: d.team }
+  ];
+  document.getElementById('preview-content').innerHTML = sections.map(s =>
+    `<div class="preview-section">
+      <div class="preview-heading">${s.h}</div>
+      <div class="preview-text ${s.b ? '' : 'preview-empty'}">${s.b ? s.b.replace(/</g,'&lt;').replace(/\n/g,'<br>') : '—'}</div>
+    </div>`
+  ).join('');
+}
+
+function copyPreview() {
+  const d = getForm();
+  const label = d.week ? 'Week of ' + fmtDate(d.week) : '';
+  const text = [
+    label, '',
+    'Key accomplishments', d.accomplishments || '—', '',
+    'Weekly priorities',   d.priorities || '—', '',
+    'Financial update',    d.financial || '—', '',
+    'Team',                d.team || '—'
+  ].join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// ── AI format ────────────────────────────────────────────────────────────────
+async function formatWithAI() {
+  const raw = document.getElementById('raw-notes').value.trim();
+  if (!raw) return;
+  const btn = document.getElementById('ai-btn');
+  btn.disabled = true;
+  setStatus('ai-status', 'spinner:Formatting…', '');
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `You are a business communication assistant helping a Data/Finance Analytics Manager write a concise weekly SVP status update. Given raw notes, extract and format into exactly four sections. Respond ONLY with a valid JSON object with keys: accomplishments, priorities, financial, team. Each value is a short bullet list using • prefix with newline between bullets. Be concise and professional. No markdown, no extra keys, no preamble, no trailing commas.`,
+        messages: [{ role: 'user', content: raw }]
+      })
+    });
+    const data = await resp.json();
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    document.getElementById('ai-accomplishments').value = parsed.accomplishments || '';
+    document.getElementById('ai-priorities').value      = parsed.priorities || '';
+    document.getElementById('ai-financial').value       = parsed.financial || '';
+    document.getElementById('ai-team').value            = parsed.team || '';
+    document.getElementById('ai-result').style.display  = '';
+    setStatus('ai-status', 'Done — review below.', 'ok');
+  } catch(e) {
+    setStatus('ai-status', 'Error — try again.', 'err');
+  }
+  btn.disabled = false;
+}
+
+function applyAI() {
+  document.getElementById('accomplishments').value = document.getElementById('ai-accomplishments').value;
+  document.getElementById('priorities').value      = document.getElementById('ai-priorities').value;
+  document.getElementById('financial').value       = document.getElementById('ai-financial').value;
+  document.getElementById('team').value            = document.getElementById('ai-team').value;
+  saveEntry();
+  switchTab('compose');
+}
+
+// ── Utility ──────────────────────────────────────────────────────────────────
+function setStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  if (msg.startsWith('spinner:')) {
+    el.innerHTML = `<span class="spinner"></span>${msg.slice(8)}`;
+    el.className = 'status-msg';
+  } else {
+    el.textContent = msg;
+    el.className = 'status-msg' + (type ? ' ' + type : '');
+  }
+  if (type === 'ok') setTimeout(() => { el.textContent = ''; }, 3000);
+}
+</script>
+</body>
+</html>
