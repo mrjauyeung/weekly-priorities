@@ -445,30 +445,53 @@ async function formatWithAI() {
 
   const btn = document.getElementById('ai-btn');
   btn.disabled = true;
-  setStatus('ai-status', 'Formatting…', '');
+  setStatus('ai-status', 'spinner:Formatting…', '');
 
   try {
     const resp = await fetch(
       'https://api-inference.huggingface.co/models/google/flan-t5-large',
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          inputs: `Format the following into JSON with keys accomplishments, priorities, financial, team:\n\n${raw}`
+          inputs: `Convert this into JSON with keys accomplishments, priorities, financial, team. 
+Return ONLY valid JSON.
+
+${raw}`
         })
       }
     );
 
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`HF ${resp.status}: ${errText}`);
+    }
+
     const data = await resp.json();
-    const text = data?.[0]?.generated_text || '';
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    const text = Array.isArray(data)
+      ? data?.[0]?.generated_text
+      : data?.generated_text || '';
+
+    if (!text) {
+      throw new Error('Empty AI response');
+    }
 
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
-      throw new Error('Model did not return valid JSON');
+      console.warn('Raw AI output:', text);
+
+      // fallback: put raw text somewhere instead of failing completely
+      document.getElementById('ai-accomplishments').value = text;
+      setStatus('ai-status', 'Partial result (not structured)', 'err');
+      btn.disabled = false;
+      return;
     }
 
     document.getElementById('ai-accomplishments').value = parsed.accomplishments || '';
@@ -476,16 +499,16 @@ async function formatWithAI() {
     document.getElementById('ai-financial').value       = parsed.financial || '';
     document.getElementById('ai-team').value            = parsed.team || '';
 
+    document.getElementById('ai-result').style.display = '';
     setStatus('ai-status', 'Done', 'ok');
 
   } catch (e) {
-    console.error(e);
-    setStatus('ai-status', 'Error — try again.', 'err');
+    console.error('AI ERROR:', e);
+    setStatus('ai-status', e.message || 'Error — try again.', 'err');
   }
 
   btn.disabled = false;
-  }
-
+}
 // ── Utility ──────────────────────────────────────────────────────────────────
 function setStatus(id, msg, type) {
   const el = document.getElementById(id);
